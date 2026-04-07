@@ -27,20 +27,25 @@ var icons = Object.freeze({
 
 function __rest(s, e) {
     var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-    {
-        t[p] = s[p];
+
+    for (var p in s) {
+        if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0) {
+            t[p] = s[p];
+        }
     }
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-    {
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-        {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-            {
-                t[p[i]] = s[p[i]];
+
+    if (s != null && typeof Object.getOwnPropertySymbols === "function") {
+        var symbols = Object.getOwnPropertySymbols(s);
+        for (var i = 0; i < symbols.length; i++) {
+            if (
+                e.indexOf(symbols[i]) < 0 &&
+                Object.prototype.propertyIsEnumerable.call(s, symbols[i])
+            ) {
+                t[symbols[i]] = s[symbols[i]];
             }
         }
     }
+
     return t;
 }
 
@@ -228,6 +233,8 @@ class OsuInputLabel extends HTMLLabelElement {
     }
 }
 
+    let externalLinksInterval = null;
+
     const routes = [
         {
             match: ["beatmapsets"],
@@ -263,7 +270,12 @@ class OsuInputLabel extends HTMLLabelElement {
 
 // functions registered in this section will run on every navigation
 function handleNavigationChange() {
-    setInterval(() => openExternalLinksInNewTab(), 2500);
+    openExternalLinksInNewTab(); // run immediately
+
+    if (externalLinksInterval === null) {
+        externalLinksInterval = setInterval(openExternalLinksInNewTab, 2500);
+    }
+
     determineOsuRoute();
 }
 
@@ -276,18 +288,26 @@ function initComponents() {
 
 function openExternalLinksInNewTab() {
     document.querySelectorAll("a").forEach((a) => {
-        if (a.href == "") {
+        const href = a.getAttribute("href");
+
+        if (!href || href.trim() === "" || href.startsWith("#")) {
             return;
         }
+
+        let url;
         try {
-            const url = new URL(a.href);
-            if (url.protocol.includes("http") && !url.host.includes("ppy.sh")) {
-                a.target = "_blank";
-            }
+            url = new URL(href, window.location.href);
+        } catch (e) {
+            return; // malformed href, ignore
         }
-        catch (e) {
-            console.log(a, a.href);
+
+        const isHttp = url.protocol === "http:" || url.protocol === "https:";
+        const isInternal =
+            url.hostname === "ppy.sh" || url.hostname.endsWith(".ppy.sh");
+
+        if (isHttp && !isInternal) {
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
         }
     });
-
 }
